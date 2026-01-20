@@ -1,18 +1,21 @@
-import { useState, useRef, useEffect } from 'react'
-import './App.css'
-import Login from './Login'
-import Introduction from './Introduction'
-import Sidebar from './Sidebar'
-import Navbar from './Navbar'
+import { useState, useRef, useEffect } from 'react';
+import Login from './Login';
+import Introduction from './Introduction';
+import Sidebar from './Sidebar';
+import Navbar from './Navbar';
+import { API_BASE_URL } from './config';
+import './App.css';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [showIntro, setShowIntro] = useState(true)
   const [notes, setNotes] = useState('')
-  const [images, setImages] = useState([]) // Changed to array
+  const [patientId, setPatientId] = useState('')
+  const [images, setImages] = useState([]) // Stores {url, id} objects
   const [history, setHistory] = useState([])
   const [showHistory, setShowHistory] = useState(false)
-  const fileInputRef = useRef(null)
+  const [activeTab, setActiveTab] = useState('assessments'); // sidebar state
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
@@ -32,18 +35,17 @@ function App() {
     if (!token) return;
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/images/', {
+      const response = await fetch(`${API_BASE_URL}/api/images/assessments/`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
         const data = await response.json();
-        // Transform backend images to history format
-        // Backend returns individual images, so we map each to a history item for now
-        const historyItems = data.images.map(img => ({
-          id: img.id,
-          images: [img.image_url],
-          notes: img.description || '',
-          date: new Date(img.uploaded_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+        // Transform backend assessments to history format
+        const historyItems = data.map(item => ({
+          id: item.id,
+          images: item.image_details.map(img => img.image_url),
+          notes: item.notes || '',
+          date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
         }));
         setHistory(historyItems);
       }
@@ -53,7 +55,7 @@ function App() {
   };
 
   const handleUploadClick = () => {
-    fileInputRef.current.click()
+    fileInputRef.current.click();
   }
 
   const handleFileChange = async (event) => {
@@ -76,22 +78,29 @@ function App() {
 
       if (validFiles.length === 0) return;
 
-      const newImagePreviews = validFiles.map(file => URL.createObjectURL(file))
-      setImages(prev => [...prev, ...newImagePreviews])
+      // Temporary local previews
+      const localPreviews = validFiles.map(file => ({
+        url: URL.createObjectURL(file),
+        id: null,
+        status: 'uploading',
+        tempKey: Math.random().toString(36).substring(2, 9)
+      }));
+      setImages(prev => [...prev, ...localPreviews]);
 
       // Upload each file to the backend
       const token = localStorage.getItem('accessToken');
 
-      for (const file of validFiles) {
-        const formData = new FormData()
-        formData.append('image', file)
-        formData.append('description', file.name) // Backend expects 'description', not 'title'
+      for (let i = 0; i < validFiles.length; i++) {
+        const file = validFiles[i];
+        const formData = new FormData();
+        formData.append('image', file);
+        formData.append('description', file.name);
 
         try {
-          const response = await fetch('http://127.0.0.1:8000/api/images/upload/', {
+          const response = await fetch(`${API_BASE_URL}/api/images/upload/`, {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${token}` // Add auth token
+              'Authorization': `Bearer ${token}`
             },
             body: formData,
           })
@@ -99,16 +108,29 @@ function App() {
           if (response.ok) {
             const data = await response.json()
             console.log('Image uploaded successfully:', data)
-            // Optional: You could update the image in state to use the backend URL
-            // but keeping the local preview is faster for now
+
+            // Update the specific image in state with its database ID using tempKey
+            setImages(prev => prev.map(img =>
+              img.tempKey === localPreviews[i].tempKey ?
+                { ...img, id: data.data.id, status: 'ready' } : img
+            ));
           } else {
             const errData = await response.json();
             console.error('Failed to upload image:', file.name, errData);
-            alert(`Failed to upload ${file.name}: ${JSON.stringify(errData.errors || errData.message)}`);
+
+            // Mark as error so it doesn't block submission indefinitely
+            setImages(prev => prev.map(img =>
+              img.tempKey === localPreviews[i].tempKey ?
+                { ...img, status: 'error', error: errData.message || 'Upload failed' } : img
+            ));
           }
         } catch (error) {
           console.error('Error uploading image:', file.name, error)
-          alert(`Error uploading ${file.name}. Is the backend server running?`);
+          // Mark as error on network/other failures
+          setImages(prev => prev.map(img =>
+            img.tempKey === localPreviews[i].tempKey ?
+              { ...img, status: 'error', error: 'Connection error' } : img
+          ));
         }
       }
     }
@@ -117,7 +139,9 @@ function App() {
   const removeImage = (index) => {
     setImages(prev => {
       const newImages = [...prev]
-      URL.revokeObjectURL(newImages[index])
+      if (newImages[index].url.startsWith('blob:')) {
+        URL.revokeObjectURL(newImages[index].url)
+      }
       newImages.splice(index, 1)
       return newImages
     })
@@ -126,30 +150,67 @@ function App() {
 
   const [isAnalyzing, setIsAnalyzing] = useState(false)
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (images.length === 0) {
       alert('Please upload at least one image before submitting.')
       handleUploadClick()
       return
     }
 
+    // Check if all images are uploaded
+    const isUploading = images.some(img => img.status === 'uploading');
+    const hasError = images.some(img => img.status === 'error');
+
+    if (isUploading) {
+      alert('Please wait for all images to finish uploading.');
+      return;
+    }
+
+    if (hasError) {
+      alert('Some images failed to upload. Please remove them or try again before submitting.');
+      return;
+    }
+
+    // Check for Patient ID
+    if (!patientId.trim()) {
+      alert('Please enter a Patient ID before submitting.');
+      return;
+    }
+
     setIsAnalyzing(true)
+    const token = localStorage.getItem('accessToken');
 
-    // Simulate Image Analysis
-    setTimeout(() => {
-      const newAssessment = {
-        id: Date.now(),
-        images: [...images],
-        notes,
-        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/images/assessments/create/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          notes: notes,
+          images: images.map(img => img.id),
+          patient_id: patientId
+        }),
+      });
+
+      if (response.ok) {
+        await response.json();
+        alert('Assessment submitted successfully!');
+        setImages([]);
+        setNotes('');
+        setPatientId('');
+        fetchHistory(); // Refresh history from backend
+      } else {
+        const errData = await response.json();
+        alert(`Failed to submit assessment: ${JSON.stringify(errData)}`);
       }
-
-      setHistory([newAssessment, ...history])
-      setImages([])
-      setNotes('')
-      setIsAnalyzing(false)
-      alert('Assessment analyzed and submitted successfully!')
-    }, 2000)
+    } catch (error) {
+      console.error("Error submitting assessment:", error);
+      alert("Error submitting assessment. Please check your connection.");
+    } finally {
+      setIsAnalyzing(false);
+    }
   }
 
   if (showIntro) {
@@ -171,7 +232,7 @@ function App() {
 
   return (
     <div className="dashboard-layout">
-      <Sidebar onLogout={handleLogout} />
+      <Sidebar onLogout={handleLogout} activeTab={activeTab} setActiveTab={setActiveTab} />
       <div className="main-content">
         <Navbar />
         <div className="page-content">
@@ -229,7 +290,7 @@ function App() {
                       </>
                     ) : (
                       <>
-                        <p>Last assessment on Oct 12, 2023</p>
+                        <p>Last assessment on Jan 12, 2026</p>
                         <p>showed signs of healing.</p>
                         <p>Measurements: 4.2cm x 2.1cm.</p>
                       </>
@@ -277,8 +338,24 @@ function App() {
                 {images.length > 0 && (
                   <div className="preview-container">
                     {images.map((img, index) => (
-                      <div key={index} className="preview-thumb">
-                        <img src={img} alt={`Preview ${index}`} />
+                      <div key={index} className={`preview-thumb ${img.status}`}>
+                        <img src={img.url} alt={`Preview ${index}`} />
+                        {img.status === 'uploading' && (
+                          <div className="upload-overlay">
+                            <div className="spinner"></div>
+                            <span>Uploading...</span>
+                          </div>
+                        )}
+                        {img.status === 'error' && (
+                          <div className="upload-overlay error">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <circle cx="12" cy="12" r="10"></circle>
+                              <line x1="12" y1="8" x2="12" y2="12"></line>
+                              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                            </svg>
+                            <span>Failed</span>
+                          </div>
+                        )}
                         <div className="remove-image" onClick={(e) => { e.stopPropagation(); removeImage(index); }}>×</div>
                       </div>
                     ))}
@@ -288,7 +365,32 @@ function App() {
 
               <div className="section-title" style={{ marginTop: '40px' }}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+                Patient Identification
+              </div>
+
+              <input
+                type="text"
+                className="patient-input"
+                placeholder="Enter Patient ID (e.g. P-1002)"
+                value={patientId}
+                onChange={(e) => setPatientId(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  borderRadius: '8px',
+                  border: '1px solid #e2e8f0',
+                  marginBottom: '20px',
+                  fontSize: '14px',
+                  backgroundColor: '#f8fafc'
+                }}
+              />
+
+              <div className="section-title">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"></path>
                   <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                 </svg>
                 Clinical Notes

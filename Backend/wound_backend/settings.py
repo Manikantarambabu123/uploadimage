@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-rezb^)61n%b^=o_3)lft+h_4m(#)nqdwx2$i8!+dk1fgmo83-z
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -120,17 +120,18 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Kolkata'
 
 USE_I18N = True
 
-USE_TZ = True
+USE_TZ = False
 
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Media files (uploaded images)
 MEDIA_URL = '/media/'
@@ -171,3 +172,13 @@ CORS_ALLOWED_ORIGINS = [
 CORS_ALLOW_CREDENTIALS = True
 
 from .jazzmin_settings import JAZZMIN_SETTINGS, JAZZMIN_UI_TWEAKS
+
+# Email Configuration (SMTP for real emails)
+# Email Configuration (SMTP for real emails)
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'anilbaddu04@gmail.com'
+EMAIL_HOST_PASSWORD = 'ptmquvmcnwulagzd'  # Removed spaces
+DEFAULT_FROM_EMAIL = 'anilbaddu04@gmail.com'  # Must match Host User for Gmail

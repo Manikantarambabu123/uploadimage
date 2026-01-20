@@ -1,8 +1,25 @@
-
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import './Navbar.css';
 
 const Navbar = () => {
+    const [currentTime, setCurrentTime] = useState(new Date());
+
+    useEffect(() => {
+        const timer = setInterval(() => setCurrentTime(new Date()), 60000);
+        return () => clearInterval(timer);
+    }, []);
+
+    const formattedDate = currentTime.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+    });
+
+    const formattedTime = currentTime.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit'
+    });
     return (
         <header className="navbar">
             <div className="navbar-left">
@@ -17,6 +34,10 @@ const Navbar = () => {
             </div>
 
             <div className="navbar-right">
+                <div className="current-date-time" style={{ marginRight: '16px', textAlign: 'right', color: '#64748b', fontSize: '0.9rem' }}>
+                    <div style={{ fontWeight: '600' }}>{formattedTime}</div>
+                    <div style={{ fontSize: '0.8rem' }}>{formattedDate}</div>
+                </div>
                 <button className="icon-btn">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
                 </button>

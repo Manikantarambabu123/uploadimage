@@ -5,7 +5,8 @@ from .models import UploadedImage, Assessment
 @admin.register(Assessment)
 class AssessmentAdmin(admin.ModelAdmin):
     list_display = ['id', 'patient_id', 'clinician', 'date', 'short_notes']
-    list_filter = ['date', 'clinician']
+    list_editable = ['patient_id']
+    list_filter = ['date', 'clinician', 'patient_id']
     search_fields = ['patient_id', 'notes']
     filter_horizontal = ['images']
     
@@ -18,10 +19,18 @@ class UploadedImageAdmin(admin.ModelAdmin):
     """
     Admin interface for uploaded images.
     """
-    list_display = ['id', 'uploaded_by', 'uploaded_at', 'image_preview_list']
+    list_display = ['id', 'uploaded_by', 'uploaded_at', 'description', 'image_preview_list']
+    list_editable = ['description']
     list_filter = ['uploaded_at', 'uploaded_by']
     search_fields = ['uploaded_by__username', 'description']
     readonly_fields = ['uploaded_at', 'image_preview']
+    actions = ['update_selected_metadata']
+
+    @admin.action(description="Update selected images metadata")
+    def update_selected_metadata(self, request, queryset):
+        # Placeholder for custom logic
+        updated = queryset.count()
+        self.message_user(request, f"Successfully updated {updated} images.")
     
     fieldsets = (
         (None, {

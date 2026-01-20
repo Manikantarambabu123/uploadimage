@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import UploadedImage
+from .models import UploadedImage, Assessment
 
 class UploadedImageSerializer(serializers.ModelSerializer):
     """
@@ -22,3 +22,14 @@ class UploadedImageSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(obj.image.url)
             return obj.image.url
         return None
+
+class AssessmentSerializer(serializers.ModelSerializer):
+    """
+    Serializer for physiological assessments.
+    """
+    image_details = UploadedImageSerializer(source='images', many=True, read_only=True)
+    
+    class Meta:
+        model = Assessment
+        fields = ['id', 'patient_id', 'clinician', 'date', 'notes', 'images', 'image_details']
+        read_only_fields = ['date', 'clinician']

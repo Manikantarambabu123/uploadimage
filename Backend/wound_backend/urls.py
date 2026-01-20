@@ -21,7 +21,7 @@ from django.conf.urls.static import static
 from django.views.generic.base import RedirectView
 
 urlpatterns = [
-    path('', RedirectView.as_view(url='/admin/', permanent=False), name='index'),  # Redirect root to admin
+    path('', RedirectView.as_view(url='/admin/', permanent=False), name='index'),  # Redirect root to admin homepage
     path('admin/', admin.site.urls),
     path('api/auth/', include('authentication.urls')),
     path('api/images/', include('images.urls')),
