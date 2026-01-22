@@ -37,7 +37,6 @@ const Login = ({ onLogin }) => {
                         if (response.ok) {
                             if (data.require_otp) {
                                 setOtpSent(true);
-                                alert('OTP has been sent to your email.');
                             } else {
                                 // Fallback if OTP is not required
                                 localStorage.setItem('accessToken', data.tokens.access);
