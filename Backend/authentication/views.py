@@ -7,6 +7,7 @@ from django.core.mail import send_mail
 from django.conf import settings
 from .serializers import LoginSerializer, UserSerializer
 from .models import OTP
+from django.contrib.auth.models import update_last_login
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -80,6 +81,10 @@ def verify_otp(request):
         if otp_obj.code == otp_code:
             otp_obj.is_verified = True
             otp_obj.save()
+            
+            # Update last login time
+            update_last_login(None, user)
+            
             
             # Generate JWT tokens
             refresh = RefreshToken.for_user(user)
