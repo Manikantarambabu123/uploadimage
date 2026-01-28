@@ -250,6 +250,36 @@ function App() {
             <Reports />
           ) : activeTab === 'settings' ? (
             <Settings />
+          ) : activeTab === 'alerts' ? (
+            <div style={{
+              padding: '80px 40px',
+              textAlign: 'center',
+              color: '#64748b',
+              background: 'white',
+              borderRadius: '16px',
+              border: '1px solid #e2e8f0',
+              maxWidth: '600px',
+              margin: '40px auto'
+            }}>
+              <div style={{
+                width: '64px',
+                height: '64px',
+                background: '#fef2f2',
+                color: '#ef4444',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 24px'
+              }}>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+              </div>
+              <h2 style={{ color: '#0f172a', marginBottom: '12px' }}>Alerts Module</h2>
+              <p style={{ fontSize: '1.1rem', lineHeight: '1.6' }}>
+                The real-time clinical alerts dashboard is currently being integrated.
+                This section serves as a placeholder for the upcoming automated wound progression monitoring system.
+              </p>
+            </div>
           ) : (
             <>
               {activeTab === 'assessments' && !isCreatingAssessment ? (
@@ -446,7 +476,7 @@ function App() {
           )}
         </div>
       </div>
-    </div>
+    </div >
   );
 }
 

@@ -15,6 +15,7 @@ const Navbar = ({ activeTab }) => {
             case 'patients': return 'Patient Records';
             case 'assessments': return 'Wound Assessments';
             case 'reports': return 'Clinical Reports';
+            case 'alerts': return 'System Alerts';
             case 'settings': return 'Account Settings';
             default: return 'Dashboard Overview';
         }
