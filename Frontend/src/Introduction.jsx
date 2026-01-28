@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import './Introduction.css';
 
-// Importing user-provided intro images
-import step1Img from 'C:/Users/APPLE/.gemini/antigravity/brain/87e8948b-0e58-40cf-b7b8-a1f81b2616e3/uploaded_image_0_1767875421481.png';
-import step2Img from 'C:/Users/APPLE/.gemini/antigravity/brain/87e8948b-0e58-40cf-b7b8-a1f81b2616e3/uploaded_image_1_1767875421481.png';
-import step3Img from 'C:/Users/APPLE/.gemini/antigravity/brain/87e8948b-0e58-40cf-b7b8-a1f81b2616e3/uploaded_image_2_1767875421481.png';
+// Importing local intro images from assets
+import step1Img from './assets/12.png';
+import step2Img from './assets/23.png';
+import step3Img from './assets/34.png';
 
 const steps = [
     {
@@ -57,10 +57,9 @@ const Introduction = ({ onFinish }) => {
             <header className="intro-header">
                 <div className="intro-logo-section">
                     <div className="logo-container">
-                        <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <rect width="40" height="40" rx="8" fill="#DDEAFE" />
-                            <path d="M20 10V30" stroke="#2563EB" strokeWidth="5" strokeLinecap="round" />
-                            <path d="M10 20H30" stroke="#2563EB" strokeWidth="5" strokeLinecap="round" />
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect width="24" height="24" rx="4" fill="#2563EB" />
+                            <path d="M12 7V17M7 12H17" stroke="white" strokeWidth="3" strokeLinecap="round" />
                         </svg>
                     </div>
                     <div className="header-text">
@@ -84,9 +83,9 @@ const Introduction = ({ onFinish }) => {
                         <ul className="feature-list">
                             {step.features.map((feature, idx) => (
                                 <li key={idx}>
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                         <circle cx="12" cy="12" r="10" fill="#2563EB" />
-                                        <path d="M8 12L11 15L16 9" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                        <path d="M8 12L11 15L16 9" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                                     </svg>
                                     {feature}
                                 </li>
@@ -106,12 +105,11 @@ const Introduction = ({ onFinish }) => {
                             <button
                                 className="btn-prev"
                                 onClick={handlePrevious}
-                                style={{ visibility: currentStep === 0 ? 'hidden' : 'visible' }}
                             >
                                 Previous
                             </button>
                             <button className="btn-next" onClick={handleNext}>
-                                {step.primaryBtn} {currentStep < 2 && <span className="arrow">→</span>}
+                                {step.primaryBtn} <span className="arrow">→</span>
                             </button>
                         </div>
                     </div>

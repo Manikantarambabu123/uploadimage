@@ -12,7 +12,12 @@ import './App.css';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [showIntro, setShowIntro] = useState(true)
+  const [showIntro, setShowIntro] = useState(() => {
+    const token = localStorage.getItem('accessToken');
+    // If not logged in already, show intro first.
+    return !token;
+  })
+  const [user, setUser] = useState(null)
   const [notes, setNotes] = useState('')
   const [patientId, setPatientId] = useState('')
   const [images, setImages] = useState([]) // Stores {url, id} objects
@@ -24,8 +29,13 @@ function App() {
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
+    const storedUser = localStorage.getItem('user');
     if (token) {
       setIsLoggedIn(true);
+      setShowIntro(false);
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      }
     }
   }, []);
 
@@ -219,20 +229,26 @@ function App() {
   }
 
   if (showIntro) {
-    return <Introduction onFinish={() => setShowIntro(false)} />
+    return <Introduction onFinish={() => {
+      localStorage.setItem('introFinished', 'true');
+      setShowIntro(false);
+    }} />
   }
 
   if (!isLoggedIn) {
-    return <Login onLogin={() => {
+    return <Login onLogin={(userData) => {
       setIsLoggedIn(true);
+      setUser(userData);
     }} />
   }
 
   const handleLogout = () => {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
     setIsLoggedIn(false);
-    setShowIntro(false);
+    setUser(null);
+    setShowIntro(true);
   };
 
   return (
@@ -242,7 +258,7 @@ function App() {
         setIsCreatingAssessment(false); // Reset to list view when switching tabs
       }} />
       <div className="main-content">
-        <Navbar activeTab={activeTab} />
+        <Navbar activeTab={activeTab} user={user} />
         <div className="page-content">
           {activeTab === 'dashboard' ? (
             <Dashboard />

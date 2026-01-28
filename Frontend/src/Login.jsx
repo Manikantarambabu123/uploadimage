@@ -42,7 +42,7 @@ const Login = ({ onLogin }) => {
                                 localStorage.setItem('accessToken', data.tokens.access);
                                 localStorage.setItem('refreshToken', data.tokens.refresh);
                                 localStorage.setItem('user', JSON.stringify(data.user));
-                                onLogin();
+                                onLogin(data.user);
                             }
                         } else {
                             const errorMsg = data.error ? `${data.message}: ${data.error}` : (data.message || 'Login failed.');
@@ -76,7 +76,7 @@ const Login = ({ onLogin }) => {
                             localStorage.setItem('accessToken', data.tokens.access);
                             localStorage.setItem('refreshToken', data.tokens.refresh);
                             localStorage.setItem('user', JSON.stringify(data.user));
-                            onLogin();
+                            onLogin(data.user);
                         } else {
                             alert(data.message || 'Invalid OTP');
                         }
