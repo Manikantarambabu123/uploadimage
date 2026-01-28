@@ -242,7 +242,7 @@ function App() {
         setIsCreatingAssessment(false); // Reset to list view when switching tabs
       }} />
       <div className="main-content">
-        {(activeTab !== 'dashboard' && activeTab !== 'reports') && <Navbar />}
+        <Navbar activeTab={activeTab} />
         <div className="page-content">
           {activeTab === 'dashboard' ? (
             <Dashboard />

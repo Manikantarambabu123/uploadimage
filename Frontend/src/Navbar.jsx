@@ -1,13 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import './Navbar.css';
 
-const Navbar = () => {
+const Navbar = ({ activeTab }) => {
     const [currentTime, setCurrentTime] = useState(new Date());
 
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 60000);
         return () => clearInterval(timer);
     }, []);
+
+    const getTitle = () => {
+        switch (activeTab) {
+            case 'dashboard': return 'Dashboard Overview';
+            case 'patients': return 'Patient Records';
+            case 'assessments': return 'Wound Assessments';
+            case 'reports': return 'Clinical Reports';
+            case 'settings': return 'Account Settings';
+            default: return 'Dashboard Overview';
+        }
+    };
 
     const formattedDate = currentTime.toLocaleDateString('en-US', {
         weekday: 'short',
@@ -20,10 +31,11 @@ const Navbar = () => {
         hour: '2-digit',
         minute: '2-digit'
     });
+
     return (
         <header className="navbar">
             <div className="navbar-left">
-                <h1>Dashboard Overview</h1>
+                <h1>{getTitle()}</h1>
             </div>
 
             <div className="navbar-center">
