@@ -6,36 +6,61 @@ import Settings from './Settings';
 import Dashboard from './Dashboard';
 import Reports from './Reports';
 import Assessments from './Assessments';
+import Patients from './Patients';
+import AddPatient from './AddPatient';
+import PatientProfile from './PatientProfile';
+import AddAssessment from './AddAssessment';
 import Navbar from './Navbar';
 import { API_BASE_URL } from './config';
 import './App.css';
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [isLoggedIn, setIsLoggedIn] = useState(() => !!localStorage.getItem('accessToken'))
   const [showIntro, setShowIntro] = useState(() => {
     const token = localStorage.getItem('accessToken');
+    const introFinished = localStorage.getItem('introFinished');
     // If not logged in already, show intro first.
-    return !token;
+    return !token && !introFinished;
   })
-  const [user, setUser] = useState(null)
+  const [user, setUser] = useState(() => {
+    const stored = localStorage.getItem('user');
+    try { return stored ? JSON.parse(stored) : null; } catch (e) { return null; }
+  })
   const [notes, setNotes] = useState('')
   const [patientId, setPatientId] = useState('')
   const [images, setImages] = useState([]) // Stores {url, id} objects
   const [history, setHistory] = useState([])
   const [showHistory, setShowHistory] = useState(false)
-  const [activeTab, setActiveTab] = useState('dashboard'); // sidebar state
-  const [isCreatingAssessment, setIsCreatingAssessment] = useState(false);
+
+  // Navigation Persistence
+  const [activeTab, setActiveTab] = useState(() => sessionStorage.getItem('activeTab') || 'dashboard');
+  const [searchTerm, setSearchTerm] = useState(''); // global search
+  const [isCreatingAssessment, setIsCreatingAssessment] = useState(() => sessionStorage.getItem('isCreatingAssessment') === 'true');
+  const [isAddingPatient, setIsAddingPatient] = useState(() => sessionStorage.getItem('isAddingPatient') === 'true');
+  const [isEditingPatient, setIsEditingPatient] = useState(() => sessionStorage.getItem('isEditingPatient') === 'true');
+  const [selectedPatient, setSelectedPatient] = useState(() => {
+    const saved = sessionStorage.getItem('selectedPatient');
+    try { return saved ? JSON.parse(saved) : null; } catch (e) { return null; }
+  });
   const fileInputRef = useRef(null);
 
   useEffect(() => {
+    sessionStorage.setItem('activeTab', activeTab);
+    sessionStorage.setItem('isCreatingAssessment', isCreatingAssessment);
+    sessionStorage.setItem('isAddingPatient', isAddingPatient);
+    sessionStorage.setItem('isEditingPatient', isEditingPatient);
+    if (selectedPatient) {
+      sessionStorage.setItem('selectedPatient', JSON.stringify(selectedPatient));
+    } else {
+      sessionStorage.removeItem('selectedPatient');
+    }
+  }, [activeTab, isCreatingAssessment, isAddingPatient, isEditingPatient, selectedPatient]);
+
+  useEffect(() => {
     const token = localStorage.getItem('accessToken');
-    const storedUser = localStorage.getItem('user');
     if (token) {
       setIsLoggedIn(true);
       setShowIntro(false);
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
-      }
     }
   }, []);
 
@@ -246,6 +271,7 @@ function App() {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
+    sessionStorage.clear(); // Clear navigation persistence
     setIsLoggedIn(false);
     setUser(null);
     setShowIntro(true);
@@ -256,240 +282,97 @@ function App() {
       <Sidebar onLogout={handleLogout} activeTab={activeTab} setActiveTab={(tab) => {
         setActiveTab(tab);
         setIsCreatingAssessment(false); // Reset to list view when switching tabs
+        setIsAddingPatient(false);
+        setIsEditingPatient(false);
+        setSelectedPatient(null);
       }} />
       <div className="main-content">
-        <Navbar activeTab={activeTab} user={user} />
+        <Navbar
+          activeTab={activeTab}
+          user={user}
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+        />
         <div className="page-content">
-          {activeTab === 'dashboard' ? (
-            <Dashboard />
-          ) : activeTab === 'reports' ? (
-            <Reports />
-          ) : activeTab === 'settings' ? (
-            <Settings />
-          ) : activeTab === 'alerts' ? (
-            <div style={{
-              padding: '80px 40px',
-              textAlign: 'center',
-              color: '#64748b',
-              background: 'white',
-              borderRadius: '16px',
-              border: '1px solid #e2e8f0',
-              maxWidth: '600px',
-              margin: '40px auto'
-            }}>
-              <div style={{
-                width: '64px',
-                height: '64px',
-                background: '#fef2f2',
-                color: '#ef4444',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 24px'
-              }}>
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-              </div>
-              <h2 style={{ color: '#0f172a', marginBottom: '12px' }}>Alerts Module</h2>
-              <p style={{ fontSize: '1.1rem', lineHeight: '1.6' }}>
-                The real-time clinical alerts dashboard is currently being integrated.
-                This section serves as a placeholder for the upcoming automated wound progression monitoring system.
-              </p>
-            </div>
-          ) : (
-            <>
-              {activeTab === 'assessments' && !isCreatingAssessment ? (
-                <Assessments onNew={() => setIsCreatingAssessment(true)} />
-              ) : (
-                <div className="container">
-                  {/* History Modal */}
-                  {showHistory && (
-                    <div className="modal-overlay" onClick={() => setShowHistory(false)}>
-                      <div className="history-modal" onClick={e => e.stopPropagation()}>
-                        <button className="close-btn" onClick={() => setShowHistory(false)}>Close</button>
-                        <h2>Assessment History</h2>
-                        {history.length === 0 ? (
-                          <p>No previous assessments found.</p>
-                        ) : (
-                          <div className="history-grid">
-                            {history.map(item => (
-                              <div key={item.id} className="history-item">
-                                <div className="history-images-row" style={{ display: 'flex', gap: '4px', overflowX: 'auto', marginBottom: '8px' }}>
-                                  {item.images && item.images.length > 0 ? (
-                                    item.images.map((img, idx) => (
-                                      <img key={idx} src={img} alt={`Wound ${idx}`} style={{ width: '60px', height: '60px', flexShrink: 0 }} />
-                                    ))
-                                  ) : (
-                                    <div style={{ height: '60px', width: '60px', background: '#e2e8f0', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                      No Image
-                                    </div>
-                                  )}
-                                </div>
-                                <div className="history-item-date">{item.date}</div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Left Column */}
-                  <div className="left-column">
-
-                    <div className="card history-card">
-                      <div className="history-content">
-                        <div className="history-icon-circle">
-                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M12 8v4l3 3"></path>
-                            <circle cx="12" cy="12" r="9"></circle>
-                            <path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5"></path>
-                          </svg>
-                        </div>
-                        <div className="history-info">
-                          <h3>Previous Assessments</h3>
-                          {history.length > 0 ? (
-                            <>
-                              <p>Last assessment on {history[0].date}</p>
-                              <p>{history[0].notes ? history[0].notes.substring(0, 30) + '...' : 'No notes provided.'}</p>
-                            </>
-                          ) : (
-                            <>
-                              <p>Last assessment on Jan 12, 2026</p>
-                              <p>showed signs of healing.</p>
-                              <p>Measurements: 4.2cm x 2.1cm.</p>
-                            </>
-                          )}
-                          <span className="view-history" onClick={() => setShowHistory(true)}>View History</span>
-                        </div>
-                      </div>
-                    </div>
-
-                  </div>
-
-                  {/* Right Column */}
-                  <div className="right-column">
-                    <div className="section-title">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-                        <circle cx="12" cy="13" r="4"></circle>
-                      </svg>
-                      Visual Documentation
-                    </div>
-
-                    <div className="card">
-                      <div className="upload-zone" onClick={handleUploadClick} style={{ cursor: 'pointer' }}>
-                        <input
-                          type="file"
-                          multiple // Enable multiple files
-                          ref={fileInputRef}
-                          style={{ display: 'none' }}
-                          accept="image/*"
-                          onChange={handleFileChange}
-                        />
-                        <div className="upload-icon">
-                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                            <polyline points="17 8 12 3 7 8"></polyline>
-                            <line x1="12" y1="3" x2="12" y2="15"></line>
-                          </svg>
-                        </div>
-                        <p className="upload-text">
-                          <span style={{ color: '#2563eb', fontWeight: 700 }}>Click to upload</span> or drag and drop
-                        </p>
-                        <p className="upload-hint">PNG, JPG up to 10MB</p>
-                      </div>
-
-                      {images.length > 0 && (
-                        <div className="preview-container">
-                          {images.map((img, index) => (
-                            <div key={index} className={`preview-thumb ${img.status}`}>
-                              <img src={img.url} alt={`Preview ${index}`} />
-                              {img.status === 'uploading' && (
-                                <div className="upload-overlay">
-                                  <div className="spinner"></div>
-                                  <span>Uploading...</span>
-                                </div>
-                              )}
-                              {img.status === 'error' && (
-                                <div className="upload-overlay error">
-                                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <circle cx="12" cy="12" r="10"></circle>
-                                    <line x1="12" y1="8" x2="12" y2="12"></line>
-                                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                                  </svg>
-                                  <span>Failed</span>
-                                </div>
-                              )}
-                              <div className="remove-image" onClick={(e) => { e.stopPropagation(); removeImage(index); }}>×</div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="section-title" style={{ marginTop: '40px' }}>
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                        <circle cx="12" cy="7" r="4"></circle>
-                      </svg>
-                      Patient Identification
-                    </div>
-
-                    <input
-                      type="text"
-                      className="patient-input"
-                      placeholder="Enter Patient ID (e.g. P-1002)"
-                      value={patientId}
-                      onChange={(e) => setPatientId(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '12px 16px',
-                        borderRadius: '8px',
-                        border: '1px solid #e2e8f0',
-                        marginBottom: '20px',
-                        fontSize: '14px',
-                        backgroundColor: '#f8fafc'
-                      }}
-                    />
-
-                    <div className="section-title">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"></path>
-                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                      </svg>
-                      Clinical Notes
-                    </div>
-
-                    <textarea
-                      className="notes-input"
-                      placeholder="Add detailed observations regarding tissue type, wound edge, surrounding skin, etc."
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                    ></textarea>
-                  </div>
-
-                  {/* Footer */}
-                  <div className="footer-actions">
-                    <button
-                      className="btn btn-secondary"
-                      onClick={handleSubmit}
-                      disabled={isAnalyzing}
-                    >
-                      {isAnalyzing ? 'Analyzing...' : 'Save & Add Another'}
-                    </button>
-                    <button
-                      className="btn btn-primary"
-                      onClick={handleSubmit}
-                      disabled={isAnalyzing}
-                    >
-                      {isAnalyzing ? 'Processing Analysis...' : 'Submit Assessment'}
-                    </button>
-                  </div>
+          {(() => {
+            if (activeTab === 'dashboard') return <Dashboard />;
+            if (activeTab === 'reports') return <Reports />;
+            if (activeTab === 'settings') return <Settings />;
+            if (activeTab === 'alerts') return (
+              <div style={{ padding: '80px 40px', textAlign: 'center', color: '#64748b', background: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', maxWidth: '600px', margin: '40px auto' }}>
+                <div style={{ width: '64px', height: '64px', background: '#fef2f2', color: '#ef4444', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
                 </div>
-              )}
-            </>
-          )}
+                <h2 style={{ color: '#0f172a', marginBottom: '12px' }}>Alerts Module</h2>
+                <p style={{ fontSize: '1.1rem', lineHeight: '1.6' }}>The real-time clinical alerts dashboard is currently being integrated.</p>
+              </div>
+            );
+
+            if (activeTab === 'patients') {
+              if (isAddingPatient) return <AddPatient onCancel={() => setIsAddingPatient(false)} onSave={() => setIsAddingPatient(false)} />;
+              if (isEditingPatient) return (
+                <AddPatient
+                  patient={selectedPatient}
+                  onCancel={() => setIsEditingPatient(false)}
+                  onSave={(updatedPatient) => {
+                    setSelectedPatient(updatedPatient);
+                    setIsEditingPatient(false);
+                  }}
+                />
+              );
+              if (selectedPatient) return (
+                <PatientProfile
+                  patient={selectedPatient}
+                  onBack={() => setSelectedPatient(null)}
+                  onEditPatient={() => setIsEditingPatient(true)}
+                  onNewAssessment={() => {
+                    setActiveTab('assessments');
+                    setIsCreatingAssessment(true);
+                  }}
+                />
+              );
+              return (
+                <Patients
+                  onAddPatient={() => setIsAddingPatient(true)}
+                  onViewPatient={(p) => setSelectedPatient(p)}
+                  sharedSearchTerm={searchTerm}
+                  setSharedSearchTerm={setSearchTerm}
+                />
+              );
+            }
+
+            if (activeTab === 'assessments') {
+              if (isCreatingAssessment) return (
+                <AddAssessment
+                  patient={selectedPatient}
+                  onCancel={() => setIsCreatingAssessment(false)}
+                  onSave={() => {
+                    setIsCreatingAssessment(false);
+                    if (selectedPatient) {
+                      setActiveTab('patients');
+                    }
+                  }}
+                />
+              );
+              return (
+                <Assessments
+                  onNew={() => setIsCreatingAssessment(true)}
+                  onViewPatient={(p) => {
+                    setSelectedPatient(p);
+                    setActiveTab('patients');
+                  }}
+                />
+              );
+            }
+
+            // Fallback / Default
+            return (
+              <div className="container">
+                {/* Legacy Content or Fallback UI */}
+                <h2 style={{ textAlign: 'center', marginTop: '100px', color: '#64748b' }}>Select a module from the sidebar</h2>
+              </div>
+            );
+          })()}
         </div>
       </div>
     </div >

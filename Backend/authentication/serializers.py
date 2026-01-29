@@ -16,11 +16,10 @@ class LoginSerializer(serializers.Serializer):
         if username and password:
             # Check if username is an email
             if '@' in username:
-                try:
-                    user_obj = User.objects.get(email=username)
+                # Use filter().first() to safely handle potential duplicate emails (taking the first match)
+                user_obj = User.objects.filter(email=username).first()
+                if user_obj:
                     username = user_obj.username
-                except User.DoesNotExist:
-                    pass
             
             user = authenticate(username=username, password=password)
             if user:

@@ -21,9 +21,9 @@
 }
 
 .page-content {
-  padding: 32px;
-  padding-top: 104px;
-  /* 72px (navbar) + 32px (default padding) */
+  padding: 24px 32px;
+  padding-top: 88px;
+  /* 72px (navbar) + 16px gap */
   flex: 1;
 }
 

@@ -8,7 +8,7 @@ class AssessmentAdmin(admin.ModelAdmin):
     list_editable = ['patient_id']
     list_filter = ['date', 'clinician', 'patient_id']
     search_fields = ['patient_id', 'notes']
-    filter_horizontal = ['images']
+    # filter_horizontal = ['images'] # Not supported with 'through' model
     
     def short_notes(self, obj):
         return obj.notes[:50] + '...' if obj.notes else ''

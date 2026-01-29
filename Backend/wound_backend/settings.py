@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     # Custom apps
     'authentication',
     'images',
+    'patient',
 ]
 
 MIDDLEWARE = [
