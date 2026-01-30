@@ -18,10 +18,10 @@ function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(() => !!localStorage.getItem('accessToken'))
   const [showIntro, setShowIntro] = useState(() => {
     const token = localStorage.getItem('accessToken');
-    const introFinished = localStorage.getItem('introFinished');
     // If not logged in already, show intro first.
-    return !token && !introFinished;
+    return !token;
   })
+
   const [user, setUser] = useState(() => {
     const stored = localStorage.getItem('user');
     try { return stored ? JSON.parse(stored) : null; } catch (e) { return null; }
@@ -271,10 +271,12 @@ function App() {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
+    // We don't remove introFinished here if we want to skip intro by default on next visit/re-login
+    // unless the user specifically wants the intro to be available again.
     sessionStorage.clear(); // Clear navigation persistence
     setIsLoggedIn(false);
     setUser(null);
-    setShowIntro(true);
+    setShowIntro(false); // Redirect to Login instead of Intro
   };
 
   return (
